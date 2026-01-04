@@ -25,6 +25,8 @@ import type {
   ValuationParams,
   Comparavel,
   ComparablesParams,
+  EvaluateParams,
+  PropertyEvaluation,
   ITBIStatus,
   ITBICalculo,
   ITBICalculoParams,
@@ -431,6 +433,38 @@ export class IPTUClient {
       }
     );
     return Array.isArray(response) ? response : [];
+  }
+
+  /**
+   * Avalia imovel por endereco OU SQL.
+   * Combina dados do modelo AVM (ML) com transacoes ITBI reais.
+   * Requer plano Pro ou superior.
+   *
+   * @param params - Parametros da avaliacao (sql OU logradouro+numero)
+   * @returns Avaliacao completa do imovel
+   */
+  async valuationEvaluate(params: EvaluateParams): Promise<PropertyEvaluation> {
+    const body: Record<string, unknown> = {
+      cidade: params.cidade || 'sp',
+      incluirItbi: params.incluirItbi ?? true,
+      incluirComparaveis: params.incluirComparaveis ?? true,
+    };
+
+    if (params.sql) {
+      body.sql = params.sql;
+    } else {
+      if (params.logradouro) body.logradouro = params.logradouro;
+      if (params.numero !== undefined) body.numero = params.numero;
+      if (params.complemento) body.complemento = params.complemento;
+      if (params.bairro) body.bairro = params.bairro;
+    }
+
+    return this.makeRequest<PropertyEvaluation>(
+      'POST',
+      '/valuation/evaluate',
+      undefined,
+      body
+    );
   }
 
   // ==================== ITBI ====================

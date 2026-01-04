@@ -211,6 +211,99 @@ export interface ITBISimulacao {
   economiaSFH: number;
 }
 
+// ==================== AVM EVALUATE ====================
+
+export interface EvaluateParams {
+  /** Numero SQL do imovel (alternativa ao endereco) */
+  sql?: string;
+  /** Nome da rua/avenida (alternativa ao SQL) */
+  logradouro?: string;
+  /** Numero do imovel */
+  numero?: number;
+  /** Apartamento, sala, etc. */
+  complemento?: string;
+  /** Bairro */
+  bairro?: string;
+  /** Codigo da cidade (sp, bh) */
+  cidade?: string;
+  /** Incluir estimativa baseada em ITBI */
+  incluirItbi?: boolean;
+  /** Incluir lista de imoveis comparaveis */
+  incluirComparaveis?: boolean;
+}
+
+export interface AVMEstimate {
+  /** Valor estimado em R$ */
+  valorEstimado: number;
+  /** Valor minimo do intervalo */
+  valorMinimo: number;
+  /** Valor maximo do intervalo */
+  valorMaximo: number;
+  /** Valor por m2 */
+  valorM2: number;
+  /** Nivel de confianca (0-1) */
+  confianca: number;
+  /** Versao do modelo */
+  modeloVersao: string;
+}
+
+export interface ITBIMarketEstimate {
+  /** Valor estimado em R$ */
+  valorEstimado: number;
+  /** Valor minimo da faixa */
+  faixaMinima: number;
+  /** Valor maximo da faixa */
+  faixaMaxima: number;
+  /** Valor por m2 (mediana) */
+  valorM2Mediana: number;
+  /** Total de transacoes analisadas */
+  totalTransacoes: number;
+  /** Periodo considerado */
+  periodo: string;
+  /** Fonte dos dados */
+  fonte: string;
+}
+
+export interface FinalValuation {
+  /** Valor estimado final */
+  estimado: number;
+  /** Valor minimo */
+  minimo: number;
+  /** Valor maximo */
+  maximo: number;
+  /** Metodo utilizado (blend_avm_itbi, avm_only, itbi_only) */
+  metodo: string;
+  /** Peso do AVM no calculo (0-1) */
+  pesoAvm: number;
+  /** Peso do ITBI no calculo (0-1) */
+  pesoItbi: number;
+  /** Nivel de confianca */
+  confianca: number;
+  /** Nota explicativa */
+  nota?: string;
+}
+
+export interface PropertyEvaluation {
+  /** Se a avaliacao foi bem sucedida */
+  success: boolean;
+  /** Dados cadastrais do imovel */
+  imovel: Record<string, unknown>;
+  /** Avaliacao pelo modelo ML (AVM) */
+  avaliacaoAvm?: AVMEstimate;
+  /** Avaliacao por transacoes ITBI reais */
+  avaliacaoItbi?: ITBIMarketEstimate;
+  /** Valor final combinado */
+  valorFinal: FinalValuation;
+  /** Imoveis comparaveis */
+  comparaveis?: Record<string, unknown>;
+  /** Metadados da avaliacao */
+  metadata: {
+    processadoEm: string;
+    fontes: string[];
+    cidade: string;
+  };
+}
+
 // ==================== API RESPONSE ====================
 
 export interface APIResponse<T> {

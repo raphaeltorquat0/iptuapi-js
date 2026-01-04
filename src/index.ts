@@ -32,6 +32,13 @@ export type {
   ValuationParams,
   Comparavel,
   ComparablesParams,
+  // AVM Evaluate
+  EvaluateParams,
+  AVMEstimate,
+  ITBIMarketEstimate,
+  FinalValuation,
+  PropertyEvaluation,
+  // ITBI
   ITBIStatus,
   ITBICalculo,
   ITBICalculoParams,
