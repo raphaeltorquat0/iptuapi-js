@@ -195,8 +195,8 @@ export class IPTUClient {
           await this.handleError(response);
         }
 
-        const data = await response.json();
-        return toCamelCase(data.data || data) as T;
+        const data = await response.json() as Record<string, unknown>;
+        return toCamelCase(data.data as Record<string, unknown> || data) as T;
       } catch (error) {
         clearTimeout(timeoutId);
 
@@ -269,7 +269,7 @@ export class IPTUClient {
     let message = 'Erro desconhecido';
 
     try {
-      data = await response.json();
+      data = await response.json() as Record<string, unknown>;
       message = (data.detail as string) || (data.message as string) || message;
     } catch {
       message = response.statusText || message;
