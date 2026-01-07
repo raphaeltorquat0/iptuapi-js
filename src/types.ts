@@ -314,4 +314,4 @@ export interface APIResponse<T> {
 
 // ==================== CIDADE ====================
 
-export type Cidade = 'sp' | 'bh' | 'recife';
+export type Cidade = 'sp' | 'bh' | 'recife' | 'poa' | 'fortaleza' | 'curitiba' | 'rj' | 'brasilia';
