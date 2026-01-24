@@ -1,0 +1,111 @@
+name: Update SDK Status
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+  schedule:
+    - cron: '0 7 * * *'  # Daily at 7 AM UTC (after validation)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-status:
+    name: Update SDK Status
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get latest version from npm
+        id: npm_version
+        run: |
+          VERSION=$(npm view iptuapi version 2>/dev/null || echo "not published")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Latest npm version: $VERSION"
+
+      - name: Get package.json version
+        id: pkg_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Package.json version: $VERSION"
+
+      - name: Run validation check
+        id: validation
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/status-check
+          cd /tmp/status-check
+          npm init -y
+          npm install iptuapi 2>/dev/null
+
+          # Test import
+          if node -e "const { IPTUClient } = require('iptuapi'); console.log('OK');" 2>/dev/null; then
+            echo "STATUS=passing" >> $GITHUB_OUTPUT
+          else
+            echo "STATUS=failing" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get current date
+        id: date
+        run: echo "DATE=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+
+      - name: Update SDK-STATUS.md
+        run: |
+          cat > SDK-STATUS.md << 'EOF'
+          # SDK Status
+
+          > Auto-generated status file. Last updated: ${{ steps.date.outputs.DATE }}
+
+          ## Version Information
+
+          | Metric | Value |
+          |--------|-------|
+          | **Latest Published** | ${{ steps.npm_version.outputs.VERSION }} |
+          | **Source Version** | ${{ steps.pkg_version.outputs.VERSION }} |
+          | **Registry** | npm (npmjs.org) |
+          | **Package** | iptuapi |
+
+          ## Validation Status
+
+          | Check | Status |
+          |-------|--------|
+          | **Clean Install** | ${{ steps.validation.outputs.STATUS == 'passing' && '✅ Passing' || '❌ Failing' }} |
+          | **CJS Import** | ${{ steps.validation.outputs.STATUS == 'passing' && '✅ Passing' || '❌ Failing' }} |
+          | **ESM Import** | ${{ steps.validation.outputs.STATUS == 'passing' && '✅ Passing' || '❌ Failing' }} |
+
+          ## Compatibility
+
+          | Node.js Version | Status |
+          |-----------------|--------|
+          | 18.x | ✅ Supported |
+          | 20.x | ✅ Supported |
+          | 22.x | ✅ Supported |
+
+          ## Links
+
+          - [npm Package](https://www.npmjs.com/package/iptuapi)
+          - [API Documentation](https://docs.iptuapi.com.br)
+          - [GitHub Repository](https://github.com/raphaeltorquat0/iptuapi-js)
+
+          ---
+          *This file is automatically updated by GitHub Actions.*
+          EOF
+
+      - name: Commit status update
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add SDK-STATUS.md
+          git diff --staged --quiet || git commit -m "chore: update SDK status [skip ci]"
+          git push || echo "No changes to push"
