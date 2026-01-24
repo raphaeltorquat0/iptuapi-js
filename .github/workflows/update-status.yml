@@ -3,11 +3,11 @@ name: Update SDK Status
 on:
   workflow_run:
     workflows: ["Release"]
-    types:
-      - completed
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
   schedule:
     - cron: '0 7 * * *'  # Daily at 7 AM UTC (after validation)
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,96 +16,94 @@ jobs:
   update-status:
     name: Update SDK Status
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Get latest version from npm
-        id: npm_version
-        run: |
-          VERSION=$(npm view iptuapi version 2>/dev/null || echo "not published")
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Latest npm version: $VERSION"
-
-      - name: Get package.json version
-        id: pkg_version
+      - name: Get latest version
+        id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Package.json version: $VERSION"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Run validation check
+      - name: Get validation status
         id: validation
-        continue-on-error: true
         run: |
-          mkdir -p /tmp/status-check
-          cd /tmp/status-check
-          npm init -y
-          npm install iptuapi 2>/dev/null
-
-          # Test import
-          if node -e "const { IPTUClient } = require('iptuapi'); console.log('OK');" 2>/dev/null; then
-            echo "STATUS=passing" >> $GITHUB_OUTPUT
+          VALIDATION_STATUS=$(gh run list --workflow=sdk-validation.yml --limit 1 --json conclusion --jq '.[0].conclusion // "unknown"')
+          if [ "$VALIDATION_STATUS" = "success" ]; then
+            echo "STATUS=FUNCIONAL" >> $GITHUB_OUTPUT
+            echo "EMOJI=🟢" >> $GITHUB_OUTPUT
           else
-            echo "STATUS=failing" >> $GITHUB_OUTPUT
+            echo "STATUS=VERIFICAR" >> $GITHUB_OUTPUT
+            echo "EMOJI=🟡" >> $GITHUB_OUTPUT
           fi
-
-      - name: Get current date
-        id: date
-        run: echo "DATE=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update SDK-STATUS.md
         run: |
-          cat > SDK-STATUS.md << 'EOF'
-          # SDK Status
+          DATE=$(date -u +%Y-%m-%d)
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          STATUS="${{ steps.validation.outputs.STATUS }}"
+          EMOJI="${{ steps.validation.outputs.EMOJI }}"
+          
+          cat > SDK-STATUS.md << EOF
+          # JavaScript/TypeScript SDK Status
 
-          > Auto-generated status file. Last updated: ${{ steps.date.outputs.DATE }}
-
-          ## Version Information
-
-          | Metric | Value |
-          |--------|-------|
-          | **Latest Published** | ${{ steps.npm_version.outputs.VERSION }} |
-          | **Source Version** | ${{ steps.pkg_version.outputs.VERSION }} |
-          | **Registry** | npm (npmjs.org) |
-          | **Package** | iptuapi |
-
-          ## Validation Status
-
-          | Check | Status |
-          |-------|--------|
-          | **Clean Install** | ${{ steps.validation.outputs.STATUS == 'passing' && '✅ Passing' || '❌ Failing' }} |
-          | **CJS Import** | ${{ steps.validation.outputs.STATUS == 'passing' && '✅ Passing' || '❌ Failing' }} |
-          | **ESM Import** | ${{ steps.validation.outputs.STATUS == 'passing' && '✅ Passing' || '❌ Failing' }} |
-
-          ## Compatibility
-
-          | Node.js Version | Status |
-          |-----------------|--------|
-          | 18.x | ✅ Supported |
-          | 20.x | ✅ Supported |
-          | 22.x | ✅ Supported |
-
-          ## Links
-
-          - [npm Package](https://www.npmjs.com/package/iptuapi)
-          - [API Documentation](https://docs.iptuapi.com.br)
-          - [GitHub Repository](https://github.com/raphaeltorquat0/iptuapi-js)
+          **Última atualização:** ${DATE}
+          **Versão:** ${VERSION}
+          **Status:** ${EMOJI} ${STATUS}
 
           ---
-          *This file is automatically updated by GitHub Actions.*
+
+          ## Informações
+
+          | Item | Valor |
+          |------|-------|
+          | **Versão** | ${VERSION} |
+          | **Registry** | npm (\`npm install iptuapi\`) |
+          | **Status** | ${EMOJI} ${STATUS} |
+          | **Mínimo** | Node.js 18+ |
+
+          ## Instalação
+
+          \`\`\`bash
+          npm install iptuapi
+          \`\`\`
+
+          ## Exemplo Rápido
+
+          \`\`\`javascript
+          const { IPTUClient } = require('iptuapi');
+
+          const client = new IPTUClient('sua_api_key');
+          const cidades = await client.iptuToolsCidades();
+          console.log(\`\${cidades.total} cidades disponíveis\`);
+          \`\`\`
+
+          ## Validação Automática
+
+          Este SDK é validado automaticamente:
+          - ✅ Instalação limpa via npm
+          - ✅ Import do pacote (CJS e ESM)
+          - ✅ Teste contra API real (\`iptuToolsCidades\`)
+          - ✅ Teste autenticado (\`consultaEndereco\`)
+
+          ---
+
+          *Atualizado automaticamente pelo CI/CD*
           EOF
 
-      - name: Commit status update
+      - name: Commit and push
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add SDK-STATUS.md
-          git diff --staged --quiet || git commit -m "chore: update SDK status [skip ci]"
-          git push || echo "No changes to push"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update SDK status [skip ci]"
+            git push
+          fi
