@@ -103,7 +103,7 @@ jobs:
                 throw new Error('IPTU_TEST_API_KEY not set');
               }
 
-              const client = new IPTUClient({ apiKey });
+              const client = new IPTUClient(apiKey);
 
               console.log('Testing iptuToolsCidades...');
               const result = await client.iptuToolsCidades();
@@ -141,7 +141,7 @@ jobs:
                 throw new Error('IPTU_TEST_API_KEY not set');
               }
 
-              const client = new IPTUClient({ apiKey });
+              const client = new IPTUClient(apiKey);
 
               console.log('Testing consultaEndereco (authenticated endpoint)...');
               const result = await client.consultaEndereco({
