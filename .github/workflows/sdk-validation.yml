@@ -51,17 +51,15 @@ jobs:
       - name: Test ESM import
         working-directory: /tmp/sdk-clean-test
         run: |
-          echo '{"type": "module"}' > package-esm.json
-          mv package.json package-cjs.json
-          mv package-esm.json package.json
-          node -e "
-            import { IPTUClient } from 'iptuapi';
-            if (!IPTUClient) {
-              console.error('IPTUClient not found in ESM export');
-              process.exit(1);
-            }
-            console.log('ESM import successful');
-          "
+          cat > test-esm.mjs << 'EOF'
+          import { IPTUClient } from 'iptuapi';
+          if (!IPTUClient) {
+            console.error('IPTUClient not found in ESM export');
+            process.exit(1);
+          }
+          console.log('ESM import successful');
+          EOF
+          node test-esm.mjs
 
   smoke-test-real-api:
     name: Smoke Test Real API
