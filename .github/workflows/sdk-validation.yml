@@ -151,12 +151,17 @@ jobs:
               });
 
               // Validate response structure
-              if (!result.sql || typeof result.sql !== 'string' || result.sql.length === 0) {
-                throw new Error('Expected sql to be a non-empty string');
+              if (!result.success) {
+                throw new Error('Expected success to be true');
+              }
+
+              const sql = result.dados_iptu?.sql;
+              if (!sql || typeof sql !== 'string') {
+                throw new Error('Expected dados_iptu.sql to be a non-empty string');
               }
 
               console.log('Authenticated endpoint test passed!');
-              console.log('SQL field present:', result.sql.substring(0, 50) + '...');
+              console.log('SQL field present:', sql.substring(0, 50) + '...');
             }
 
             testAuthenticatedEndpoint().catch(err => {
