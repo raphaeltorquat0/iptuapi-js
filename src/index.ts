@@ -483,7 +483,7 @@ export class IPTUClient {
   ): Promise<never> {
     let body: Record<string, unknown> = {};
     try {
-      body = await response.json();
+      body = await response.json() as Record<string, unknown>;
     } catch {
       body = { detail: response.statusText };
     }
