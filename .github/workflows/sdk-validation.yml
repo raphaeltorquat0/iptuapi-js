@@ -80,16 +80,23 @@ jobs:
           npm init -y
           npm install iptuapi
 
-      - name: Test public endpoint (iptuToolsCidades)
+      - name: Test iptuToolsCidades endpoint
         working-directory: /tmp/sdk-smoke-test
+        env:
+          IPTU_TEST_API_KEY: ${{ secrets.IPTU_TEST_API_KEY }}
         run: |
           node -e "
             const { IPTUClient } = require('iptuapi');
 
-            async function testPublicEndpoint() {
-              const client = new IPTUClient();
+            async function testEndpoint() {
+              const apiKey = process.env.IPTU_TEST_API_KEY;
+              if (!apiKey) {
+                throw new Error('IPTU_TEST_API_KEY not set');
+              }
 
-              console.log('Testing iptuToolsCidades (public endpoint)...');
+              const client = new IPTUClient({ apiKey });
+
+              console.log('Testing iptuToolsCidades...');
               const result = await client.iptuToolsCidades();
 
               // Validate response structure
@@ -101,11 +108,11 @@ jobs:
                 throw new Error('Expected at least 9 cidades, got ' + result.total);
               }
 
-              console.log('Public endpoint test passed!');
+              console.log('iptuToolsCidades test passed!');
               console.log('Total cidades:', result.total);
             }
 
-            testPublicEndpoint().catch(err => {
+            testEndpoint().catch(err => {
               console.error('Test failed:', err.message);
               process.exit(1);
             });
