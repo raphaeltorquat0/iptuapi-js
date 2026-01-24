@@ -80,6 +80,15 @@ jobs:
           npm init -y
           npm install iptuapi
 
+      - name: Test API key with curl (debug)
+        env:
+          IPTU_TEST_API_KEY: ${{ secrets.IPTU_TEST_API_KEY }}
+        run: |
+          echo "API key length: ${#IPTU_TEST_API_KEY}"
+          echo "API key prefix: ${IPTU_TEST_API_KEY:0:10}..."
+          curl -s -X GET "https://iptuapi.com.br/api/v1/iptu-tools/cidades" \
+            -H "X-API-Key: $IPTU_TEST_API_KEY" | head -c 200
+
       - name: Test iptuToolsCidades endpoint
         working-directory: /tmp/sdk-smoke-test
         env:
